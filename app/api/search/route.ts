@@ -28,14 +28,14 @@ export async function POST(req: NextRequest) {
     const versesCol = dbAdmin.collection(process.env.FIREBASE_VERSES_COLLECTION || 'verses')
     const tokenQuery = await versesCol.where('tokens', 'array-contains', token).limit(50).get()
     if (!tokenQuery.empty) {
-      tokenQuery.docs.forEach((d) => {
-        const v = d.data() as any
-        if (scope !== 'all' && v.testament && v.testament !== scope.toUpperCase()) return
+      for (const d of tokenQuery.docs) {
+        const v: any = d.data()
+        if (scope !== 'all' && v.testament && v.testament !== scope.toUpperCase()) continue
         const text = v.text || v.pashto_text || v.pashto || ''
         const ref = `${v.book} ${v.chapter}:${v.verse}`
         results.push({ ref, text })
         coverage.set(v.book, (coverage.get(v.book) || 0) + 1)
-      })
+      }
     }
 
     // Fallback: expand via mappings and occurrences
@@ -49,11 +49,11 @@ export async function POST(req: NextRequest) {
       // 2) forms via mapping or inflections
       const forms = new Set<string>()
       const m2 = await mapCol.where('root', '==', root).limit(1000).get()
-      m2.forEach((d) => { const f = d.data().form; if (f) forms.add(String(f)) })
+      for (const d of m2.docs) { const f = (d.data() as any).form; if (f) forms.add(String(f)) }
       if (forms.size === 0) {
         const inflCol = dbAdmin.collection('inflections')
         const infl = await inflCol.where('base_word', '==', root).limit(1000).get()
-        infl.forEach((d) => { const f = d.data().inflected_form; if (f) forms.add(String(f)) })
+        for (const d of infl.docs) { const f = (d.data() as any).inflected_form; if (f) forms.add(String(f)) }
       }
       if (forms.size === 0) forms.add(norm)
 
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
       for (let i = 0; i < allForms.length; i += 10) {
         const batch = allForms.slice(i, i + 10)
         const qs = await occCol.where('pashto_form', 'in', batch).limit(1000).get()
-        qs.forEach((d) => { const r = d.data().verse_reference; if (r) occRefs.add(String(r)) })
+        for (const d of qs.docs) { const r = (d.data() as any).verse_reference; if (r) occRefs.add(String(r)) }
       }
 
       // 4) resolve verses by exact ref
