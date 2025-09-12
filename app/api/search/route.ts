@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { dbAdmin } from '@/lib/firebase-admin'
+import { dbAdmin } from '../../../lib/firebase-admin'
 
 type Verse = { ref: string; text: string }
 
@@ -97,4 +97,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ results: [], coverage: [], error: (e as any)?.message || 'error' }, { status: 500 })
   }
 }
-
